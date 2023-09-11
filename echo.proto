@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "github.com/PapaCharlie/grpc-test;grpctest";
+
+service EchoService {
+  rpc Echo(Request) returns (stream Response);
+}
+
+message Request {
+  int32 count = 1;
+}
+
+message Response {
+  bytes buffer = 1;
+}
