@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -46,9 +47,11 @@ func benchmarkServer(b *testing.B, conns []grpc.ClientConnInterface) {
 			start.Wait()
 			stream, err := c.Echo(context.Background(), req)
 			require.NoError(b, err)
+
+			var res Response
 			for i := 0; i < b.N; i++ {
-				_, err = stream.Recv()
-				require.NoError(b, err)
+				require.NoError(b, stream.RecvMsg(&res))
+				res.Reset()
 			}
 		}()
 	}
@@ -68,6 +71,8 @@ func runBenchmark(b *testing.B, pool grpc.SendBufferPool) {
 		require.NoError(b, l.Close())
 	}()
 
+	recvPool := grpc.NewSharedBufferPool()
+
 	conns := make([]grpc.ClientConnInterface, 100)
 	for i := range conns {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -76,6 +81,7 @@ func runBenchmark(b *testing.B, pool grpc.SendBufferPool) {
 			l.Addr().String(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 			grpc.WithBlock(),
+			grpc.WithRecvBufferPool(recvPool),
 		)
 		cancel()
 		require.NoError(b, err)
@@ -88,6 +94,7 @@ func runBenchmark(b *testing.B, pool grpc.SendBufferPool) {
 		b.Run(fmt.Sprintf("%d/%d", len(conns), size), func(b *testing.B) {
 			benchmarkServer(b, conns)
 		})
+		runtime.GC()
 	}
 }
 
