@@ -87,7 +87,7 @@ func runBenchmark(b *testing.B, pool grpc.SendBufferPool) {
 		require.NoError(b, err)
 	}
 
-	for size := 1 << 9; size <= 1<<16; size <<= 1 {
+	for size := 1 << 9; size <= 1<<15; size <<= 1 {
 		resPointer.Store(&Response{
 			Buffer: make([]byte, size),
 		})
